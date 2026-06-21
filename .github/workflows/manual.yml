@@ -13,7 +13,7 @@ jobs:
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Instalar Cordova
         run: npm install -g cordova
@@ -26,14 +26,20 @@ jobs:
           cp ../config.xml .
           cordova platform add ios --nobuild
 
-      - name: Compilar .IPA sin firmar
+      - name: Compilar Proyecto Nativo
         run: |
           cd build-dir
           mkdir -p platforms/ios/build/device
-          xcodebuild -workspace platforms/ios/"Navaja GPS".xcworkspace -scheme "Navaja GPS" -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO AFTER_CODE_SIGN_SCRIPT="" -destination "generic/platform=iOS" archive -archivePath platforms/ios/build/"Navaja GPS".xcarchive
-          xcodebuild -exportArchive -archivePath platforms/ios/build/"Navaja GPS".xcarchive -exportPath platforms/ios/build/device -exportOptionsPlist platforms/ios/"Navaja GPS"/exportOptions.plist || true
-          cd platforms/ios/build/device && zip -r ../../../../NavajaGPS.ipa . || true
-
+          xcodebuild -workspace platforms/ios/"Navaja GPS".xcworkspace -scheme "Navaja GPS" -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO AFTER_CODE_SIGN_SCRIPT="" -destination "generic/platform=iOS" archive -archivePath platforms/ios/build/"Navaja GPS".xcarchive
+          
+      - name: Empaquetar IPA Casero
+        run: |
+          cd build-dir
+          cd platforms/ios/build/"Navaja GPS".xcarchive/Products/Applications/
+          mkdir -p Payload
+          cp -r "Navaja GPS".app Payload/
+          zip -r ../../../../../NavajaGPS.ipa Payload
+          
       - name: Guardar tu archivo .IPA listo para descargar
         uses: actions/upload-artifact@v4
         with:
