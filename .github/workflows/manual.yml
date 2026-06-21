@@ -1,0 +1,41 @@
+name: Compilar IPA de Emergencia
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Descargar Codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar Cordova
+        run: npm install -g cordova
+
+      - name: Crear Proyecto Nativo iOS
+        run: |
+          cordova create build-dir com.pabolo.navajagps "Navaja GPS"
+          cd build-dir
+          cp ../index.html www/
+          cp ../config.xml .
+          cordova platform add ios --nobuild
+
+      - name: Compilar .IPA sin firmar
+        run: |
+          cd build-dir
+          mkdir -p platforms/ios/build/device
+          xcodebuild -workspace platforms/ios/"Navaja GPS".xcworkspace -scheme "Navaja GPS" -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO AFTER_CODE_SIGN_SCRIPT="" -destination "generic/platform=iOS" archive -archivePath platforms/ios/build/"Navaja GPS".xcarchive
+          xcodebuild -exportArchive -archivePath platforms/ios/build/"Navaja GPS".xcarchive -exportPath platforms/ios/build/device -exportOptionsPlist platforms/ios/"Navaja GPS"/exportOptions.plist || true
+          cd platforms/ios/build/device && zip -r ../../../../NavajaGPS.ipa . || true
+
+      - name: Guardar tu archivo .IPA listo para descargar
+        uses: actions/upload-artifact@v4
+        with:
+          name: NavajaGPS-iOS
+          path: NavajaGPS.ipa
