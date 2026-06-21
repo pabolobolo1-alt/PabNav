@@ -1,0 +1,64 @@
+name: Compilar IPA Manual Fina
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Descargar Codigo
+        uses: actions/checkout@v4
+
+      - name: Generar Contenedor IPA
+        run: |
+          # Crear carpeta contenedora obligatoria de Apple
+          mkdir -p Payload/NavajaGPS.app
+          
+          # Meter tu index.html dentro de la app
+          cp index.html Payload/NavajaGPS.app/
+          
+          # Inyectar el manifiesto Info.plist que iOS exige para abrir la app
+          cat <<EOF > Payload/NavajaGPS.app/Info.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>NavajaGPS</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.pabolo.navajagps</string>
+              <key>CFBundleName</key>
+              <string>NavajaGPS</string>
+              <key>CFBundleDisplayName</key>
+              <string>Navaja GPS</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleSignature</key>
+              <string>????</string>
+              <key>CFBundleVersion</key>
+              <string>1.0</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0</string>
+              <key>LSRequiresIPhoneOS</key>
+              <true/>
+              <key>NSLocationWhenInUseUsageDescription</key>
+              <string>Necesitamos el GPS para medir tu ruta en el monte.</string>
+              <key>NSMotionUsageDescription</key>
+              <string>Necesitamos el giroscopio para que gire la brújula.</string>
+              <key>UISupportedInterfaceOrientations</key>
+              <array>
+                  <string>UIInterfaceOrientationPortrait</string>
+              </array>
+          </dict>
+          </plist>
+          EOF
+          
+          # Comprimir en formato .ipa real
+          zip -r NavajaGPS.ipa Payload
+
+      - name: Guardar tu archivo .IPA listo para descargar
+        uses: actions/upload-artifact@v4
+        with:
+          name: NavajaGPS-iOS-Manual
+          path: NavajaGPS.ipa
