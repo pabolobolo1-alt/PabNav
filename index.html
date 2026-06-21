@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PabNav 1.2 - Utilidades GPS</title>
+    
+    <link rel="apple-touch-icon" href="https://fav.farm/🛰️">
+    <link rel="icon" type="image/png" href="https://fav.farm/🛰️">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #050811;
+            color: #f0f6fc;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        h1 { 
+            font-size: 26px; 
+            font-weight: 800; 
+            background: linear-gradient(180deg, #ffffff 0%, #58a6ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center; 
+            margin-top: 10px;
+        }
+
+        .subtitle { 
+            font-size: 11px; 
+            color: #8b949e; 
+            margin-bottom: 25px; 
+            letter-spacing: 3px; 
+            text-transform: uppercase; 
+            opacity: 0.8;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes sidePulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+
+        /* Brújula visual */
+        #compass-container {
+            width: 130px;
+            height: 130px;
+            border: 4px solid #21262d;
+            border-radius: 50%;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background: radial-gradient(circle, #161b22 0%, #0d1117 100%);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.8);
+            animation: fadeInUp 0.5s ease-out both;
+        }
+
+        #compass-rose {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            transition: transform 0.1s linear;
+        }
+
+        .rose-letter { position: absolute; font-weight: 900; font-size: 13px; color: #8b949e; }
+        .rose-n { top: 8px; left: 50%; transform: translateX(-50%); color: #ff7b72; font-size: 14px; }
+        .rose-s { bottom: 8px; left: 50%; transform: translateX(-50%); }
+        .rose-e { right: 10px; top: 50%; transform: translateY(-50%); }
+        .rose-w { left: 10px; top: 50%; transform: translateY(-50%); }
+
+        #needle {
+            width: 4px;
+            height: 76px;
+            background: linear-gradient(to bottom, #ff7b72 50%, #8b949e 50%);
+            border-radius: 4px;
+            z-index: 2;
+            transition: transform 0.1s linear;
+        }
+
+        .grid { width: 100%; max-width: 380px; }
+
+        .card {
+            background: linear-gradient(135deg, #12161f 0%, #1a1f29 100%);
+            border: 1px solid rgba(48, 54, 61, 0.6);
+            border-radius: 18px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            position: relative;
+            animation: fadeInUp 0.5s ease-out both;
+        }
+
+        .card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; 
+            background: #58a6ff; border-radius: 18px 0 0 18px;
+            animation: sidePulse 2s infinite ease-in-out;
+        }
+        
+        .card.heading::before { background: #ff7b72; }
+        .card.alt::before { background: #388bfd; }
+        .card.mil::before { background: #ff9b42; }
+        .card.extra::before { background: #56d364; }
+        .card.calc::before { background: #ab7df6; }
+        .card.util::before { background: #ffca28; }
+        
+        .label { font-size: 10px; color: #8b949e; text-transform: uppercase; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 5px; }
+        .value { font-size: 22px; font-weight: 700; color: #ffffff; }
+        .unit { font-size: 13px; font-weight: 500; color: #8b949e; margin-left: 3px; }
+        
+        .calc-input {
+            width: 80px; background: #070a12; border: 1px solid #30363d; color: white; border-radius: 8px; padding: 6px; font-size: 15px; font-weight: bold; text-align: center;
+        }
+        .calc-row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+
+        .btn-util {
+            background: #21262d; border: 1px solid #30363d; color: #f0f6fc; padding: 8px 14px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer;
+        }
+        .btn-util:active { background: #30363d; }
+
+        .divider { 
+            width: 100%; max-width: 380px; height: 1px; 
+            background: linear-gradient(90deg, rgba(48,54,61,0) 0%, rgba(48,54,61,1) 15%, rgba(48,54,61,1) 85%, rgba(48,54,61,0) 100%); 
+            margin: 24px 0; position: relative; 
+        }
+        .divider-text { 
+            position: absolute; top: -10px; left: 24px; background: #050811; padding: 0 12px; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+        }
+        .div-green { color: #56d364; }
+        .div-purple { color: #ab7df6; }
+        .div-yellow { color: #ffca28; }
+
+        .btn-action {
+            width: 100%; max-width: 380px; background: rgba(56, 139, 253, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(56, 139, 253, 0.4); color: #58a6ff; padding: 12px; border-radius: 14px; font-weight: 700; font-size: 12px; text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px;
+        }
+        .btn-share {
+            width: 100%; max-width: 380px; background: linear-gradient(135deg, #1d3a24 0%, #0c1f11 100%); border: 1px solid #2ea44f; color: #56d364;
+            padding: 16px; border-radius: 16px; font-weight: 800; font-size: 13px; text-transform: uppercase; margin-top: 15px; letter-spacing: 1px; box-shadow: 0 8px 16px rgba(46, 164, 79, 0.15);
+        }
+        .btn-share:active { transform: scale(0.97); background: #2ea44f; color: #fff; }
+
+        #flash-screen {
+            display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; background: white; z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="flash-screen"></div>
+
+    <h1>PabNav 1.2 - GPS</h1>
+    <div class="subtitle">Edición Montaña v26</div>
+
+    <button class="btn-action" onclick="activarTodo()">🎛️ Activar Brújula e Inclinómetro</button>
+
+    <div id="compass-container">
+        <div id="compass-rose">
+            <span class="rose-letter rose-n">N</span>
+            <span class="rose-letter rose-e">E</span>
+            <span class="rose-letter rose-s">S</span>
+            <span class="rose-letter rose-w">O</span>
+        </div>
+        <div id="needle"></div>
+    </div>
+
+    <div class="grid">
+        <div class="card heading">
+            <div class="label">Compass 🧭 Rumbo / Orientación</div>
+            <div id="heading-val" class="value">0°</div>
+        </div>
+    </div>
+
+    <div class="grid" style="margin-top: 5px;">
+        <div class="card">
+            <div class="label">📍 Latitud</div>
+            <div id="lat" class="value">0.000000°</div>
+        </div>
+        <div class="card">
+            <div class="label">📍 Longitud</div>
+            <div id="lon" class="value">0.000000°</div>
+        </div>
+        <div class="card mil">
+            <div class="label">🪖 Formato Militar / Geocache (DDM)</div>
+            <div id="geo" class="value" style="font-size: 17px; color: #ff9b42;">Esperando satélites...</div>
+        </div>
+        <div class="card alt">
+            <div class="label">⛰️ Altitud (Nivel del Mar)</div>
+            <div id="alt" class="value">0.0<span class="unit">m</span></div>
+        </div>
+    </div>
+
+    <div class="divider">
+        <span class="divider-text div-green">🛠️ Funciones de Sensores</span>
+    </div>
+
+    <div class="grid">
+        <div class="card extra">
+            <div class="label">🥾 Velocidad de Marcha</div>
+            <div id="vel" class="value">0.0<span class="unit">km/h</span></div>
+        </div>
+        <div class="card extra">
+            <div class="label">🎯 Precisión del GPS</div>
+            <div id="acc" class="value">+/- 0<span class="unit">m</span></div>
+        </div>
+        <div class="card extra">
+            <div class="label">🏃 Distancia Caminada en Ruta</div>
+            <div id="dist" class="value">0.000<span class="unit">km</span></div>
+        </div>
+    </div>
+
+    <div class="divider">
+        <span class="divider-text div-purple">🧮 Calculadoras de Marcha</span>
+    </div>
+
+    <div class="grid">
+        <div class="card calc">
+            <div class="label">⏱️ Estimador de Tiempo de Llegada</div>
+            <div class="calc-row">
+                <span>Distancia restante:</span>
+                <input type="number" id="input-dist" class="calc-input" value="5" oninput="calcularTiempoRuta()"> <span class="unit">km</span>
+            </div>
+            <div class="calc-row" style="margin-top: 12px; border-top: 1px solid rgba(48,54,61,0.5); padding-top: 8px;">
+                <span>Tiempo estimado:</span>
+                <div id="res-tiempo" class="value" style="font-size: 18px; color: #ab7df6;">Calculando...</div>
+            </div>
+        </div>
+
+        <div class="card calc">
+            <div class="label">⚓ Conversor de Unidades GPS</div>
+            <div class="calc-row">
+                <span>Velocidad en Nudos:</span>
+                <div id="calc-nudos" class="value" style="font-size: 18px;">0.0 <span class="unit">kts</span></div>
+            </div>
+            <div class="calc-row">
+                <span>Distancia en Millas Náuticas:</span>
+                <div id="calc-millas" class="value" style="font-size: 18px; color: #8b949e;">0.000 <span class="unit">NM</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="divider">
+        <span class="divider-text div-yellow">⚙️ UTILIDADES EXTRA</span>
+    </div>
+
+    <div class="grid">
+        <div class="card util">
+            <div class="label">🔢 Contador</div>
+            <div class="calc-row" style="margin-top: 5px;">
+                <span id="click-counter" class="value">0 <span class="unit">clicks</span></span>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-util" onclick="modificarContador(-1)">-1</button>
+                    <button class="btn-util" onclick="modificarContador(1)" style="background:#ffca28; color:#000;">+1</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card util">
+            <div class="label">🔦 Señal SOS Lumínica</div>
+            <div class="calc-row">
+                <span>Destello estroboscópico de emergencia:</span>
+                <button id="btn-flash" class="btn-util" onclick="toggleStrobe()">Apagado</button>
+            </div>
+        </div>
+
+        <div class="card util">
+            <div class="label">📐 Nivel de Pendiente Terreno</div>
+            <div class="calc-row">
+                <span>Ángulo de inclinación actual:</span>
+                <div id="tilt-val" class="value" style="font-size:18px; color:#ffca28;">0°</div>
+            </div>
+        </div>
+
+        <div class="card util">
+            <div class="label">🔊 Silbato de Rescate Acústico</div>
+            <div class="calc-row">
+                <span>Localizador sónico por niebla:</span>
+                <button id="btn-whistle" class="btn-util" onclick="toggleSilbato()">Emitir</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn-share" onclick="compartirNativoSOS()">📤 Compartir Coordenadas SOS</button>
+
+    <script>
+        let distanciaTotal = 0;
+        let ultimaLat = null;
+        let ultimaLon = null;
+        let velocidadActualKmh = 0;
+        let contadorClicks = 0;
+        let strobeInterval = null;
+        let audioCtx = null;
+        let oscillator = null;
+
+        setTimeout(() => {
+            calcularTiempoRuta();
+            actualizarConversorNautico();
+        }, 500);
+
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(function(pos) {
+                let lat = pos.coords.latitude;
+                let lon = pos.coords.longitude;
+                
+                document.getElementById('lat').innerText = lat.toFixed(6) + "°";
+                document.getElementById('lon').innerText = lon.toFixed(6) + "°";
+                
+                if (pos.coords.altitude !== null) {
+                    document.getElementById('alt').innerHTML = pos.coords.altitude.toFixed(1) + '<span class="unit">m</span>';
+                }
+                
+                if (pos.coords.speed !== null && pos.coords.speed > 0) {
+                    velocidadActualKmh = pos.coords.speed * 3.6;
+                } else {
+                    velocidadActualKmh = 0;
+                }
+                document.getElementById('vel').innerHTML = velocidadActualKmh.toFixed(1) + '<span class="unit">km/h</span>';
+                
+                if (pos.coords.accuracy !== null) {
+                    document.getElementById('acc').innerHTML = '+/- ' + pos.coords.accuracy.toFixed(0) + '<span class="unit">m</span>';
+                }
+
+                let latDesignator = lat >= 0 ? "N" : "S";
+                let lonDesignator = lon >= 0 ? "E" : "O";
+                let latDeg = Math.floor(Math.abs(lat));
+                let latMin = ((Math.abs(lat) - latDeg) * 60).toFixed(3);
+                let lonDeg = Math.floor(Math.abs(lon));
+                let lonMin = ((Math.abs(lon) - lonDeg) * 60).toFixed(3);
+                document.getElementById('geo').innerText = `${latDesignator} ${latDeg}° ${latMin}' / ${lonDesignator} ${lonDeg}° ${lonMin}'`;
+
+                if (ultimaLat !== null && velocidadActualKmh > 0.5) {
+                    let R = 6371;
+                    let dLat = (lat - ultimaLat) * Math.PI / 180;
+                    let dLon = (lon - ultimaLon) * Math.PI / 180;
+                    let a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(ultimaLat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+                    let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                    distanciaTotal += R * c;
+                }
+                document.getElementById('dist').innerHTML = distanciaTotal.toFixed(3) + '<span class="unit">km</span>';
+                
+                ultimaLat = lat;
+                ultimaLon = lon;
+
+                calcularTiempoRuta();
+                actualizarConversorNautico();
+
+            }, null, { enableHighAccuracy: true, maximumAge: 0 });
+        }
+
+        function calcularTiempoRuta() {
+            let distRestante = parseFloat(document.getElementById('input-dist').value);
+            if (isNaN(distRestante) || distRestante <= 0) {
+                document.getElementById('res-tiempo').innerText = "Introduce km";
+                return;
+            }
+            let v = velocidadActualKmh > 1.5 ? velocidadActualKmh : 4.0;
+            let tiempoHoras = distRestante / v;
+            let horas = Math.floor(tiempoHoras);
+            let minutos = Math.round((tiempoHoras - horas) * 60);
+
+            let textoResultado = "";
+            if (horas > 0) textoResultado += `${horas}h `;
+            textoResultado += `${minutos} min`;
+            textoResultado += velocidadActualKmh <= 1.5 ? " (Paso base)" : " (A tu ritmo)";
+            document.getElementById('res-tiempo').innerText = textoResultado;
+        }
+
+        function actualizarConversorNautico() {
+            let nudos = velocidadActualKmh * 0.539957;
+            document.getElementById('calc-nudos').innerHTML = nudos.toFixed(1) + ' <span class="unit">kts</span>';
+            let millasNauticas = distanciaTotal * 0.539957;
+            document.getElementById('calc-millas').innerHTML = millasNauticas.toFixed(3) + ' <span class="unit">NM</span>';
+        }
+
+        function activarTodo() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(state => {
+                        if (state === 'granted') {
+                            window.addEventListener('deviceorientation', manejarSensoresMovimiento, true);
+                        } else {
+                            alert("Permiso denegado para sensores.");
+                        }
+                    }).catch(() => alert("Asegúrate de estar navegando bajo HTTPS en Netlify."));
+            } else {
+                window.addEventListener('deviceorientation', manejarSensoresMovimiento, true);
+            }
+        }
+
+        function manejarSensoresMovimiento(event) {
+            let heading = 0;
+            if (event.webkitCompassHeading) {
+                heading = event.webkitCompassHeading;
+            } else if (event.alpha) {
+                heading = 360 - event.alpha;
+            }
+            document.getElementById('needle').style.transform = `rotate(${heading}deg)`;
+            document.getElementById('compass-rose').style.transform = `rotate(${-heading}deg)`;
+            document.getElementById('heading-val').innerText = heading.toFixed(0) + "°";
+
+            if (event.beta !== null) {
+                let inclinacion = Math.abs(Math.round(event.beta));
+                document.getElementById('tilt-val').innerHTML = inclinacion + '°';
+            }
+        }
+
+        function modificarContador(valor) {
+            contadorClicks += valor;
+            if (contadorClicks < 0) contadorClicks = 0;
+            document.getElementById('click-counter').innerHTML = contadorClicks + ' <span class="unit">clicks</span>';
+        }
+
+        function toggleStrobe() {
+            let scr = document.getElementById('flash-screen');
+            let btn = document.getElementById('btn-flash');
+            if (strobeInterval) {
+                clearInterval(strobeInterval);
+                strobeInterval = null;
+                scr.style.display = "none";
+                btn.innerText = "Apagado";
+                btn.style.background = "#21262d";
+            } else {
+                btn.innerText = "⚠️ SOS ACTIVO";
+                btn.style.background = "#da3633";
+                strobeInterval = setInterval(() => {
+                    scr.style.display = (scr.style.display === "none" ? "block" : "none");
+                }, 120);
+            }
+        }
+
+        function toggleSilbato() {
+            let btn = document.getElementById('btn-whistle');
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            if (oscillator) {
+                oscillator.stop();
+                oscillator.disconnect();
+                oscillator = null;
+                btn.innerText = "Emitir";
+                btn.style.background = "#21262d";
+            } else {
+                oscillator = audioCtx.createOscillator();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(2200, audioCtx.currentTime);
+                oscillator.connect(audioCtx.destination);
+                oscillator.start();
+                btn.innerText = "⏹️ Parar";
+                btn.style.background = "#ff9b42";
+            }
+        }
+
+        function compartirNativoSOS() {
+            let lat = document.getElementById('lat').innerText;
+            let lon = document.getElementById('lon').innerText;
+            let mil = document.getElementById('geo').innerText;
+            let alt = document.getElementById('alt').innerText;
+            
+            let textoSOS = `🚨 ALERTA SOS - MONTAÑA 🚨\n\n` +
+                           `📌 Latitud: ${lat}\n` +
+                           `📌 Longitud: ${lon}\n` +
+                           `🪖 Formato Militar: ${mil}\n` +
+                           `⛰️ Altitud: ${alt}\n\n` +
+                           `🗺️ Mapa: http://maps.google.com/?q=${lat.replace('°','')},${lon.replace('°','')}`;
+
+            if (navigator.share) {
+                navigator.share({
+                    title: '🚨 MI POSICIÓN DE EMERGENCIA',
+                    text: textoSOS
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(textoSOS);
+                alert("Menú nativo no disponible. Coordenadas copiadas al portapapeles.");
+            }
+        }
+    </script>
+</body>
+</html>

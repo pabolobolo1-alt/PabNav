@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.pabolo.navajagps" version="1.0.0" xmlns="http://www.w3.org/ns/widgets">
+    <name>PabNav 1.2</name>
+    <description>Utilidades GPS</description>
+    <content src="index.html" />
+    <icon src="https://fav.farm/🛰️" />
+    <plugin name="cordova-plugin-geolocation" />
+    <plugin name="cordova-plugin-device-orientation" />
+    <edit-config target="NSLocationWhenInUseUsageDescription" parent="/*" mode="merge">
+        <string>Necesitamos el GPS para medir tu ruta en el monte.</string>
+    </edit-config>
+    <edit-config target="NSMotionUsageDescription" parent="/*" mode="merge">
+        <string>Necesitamos el giroscopio para que gire la brújula.</string>
+    </edit-config>
+</widget>
